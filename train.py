@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import argparse
 import random
 
@@ -71,8 +72,10 @@ def main():
     setup_logger() # set after init_distributed_mode() to only log on master.
 
     # Wandb logger
-    wandb.login()
-    wandb.init(project="YOUR_PROJECT_NAME")
+    global_rank = int(os.environ["RANK"])
+    if global_rank == 0:
+        wandb.login()
+        wandb.init(project="YOUR_PROJECT_NAME")
 
     # print config
     cfg.pretty_print()
