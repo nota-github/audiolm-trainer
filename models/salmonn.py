@@ -20,7 +20,7 @@ import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import LlamaTokenizer, StoppingCriteriaList
+from transformers import LlamaTokenizer, StoppingCriteriaList, AutoTokenizer, AutoModelForCausalLM
 from peft import LoraConfig, TaskType, get_peft_model
 
 from .Qformer import BertConfig, BertLMHeadModel
@@ -106,20 +106,20 @@ class SALMONN(nn.Module):
         self.low_resource = low_resource
 
         logging.info('Loading LLaMA Tokenizer')
-        self.llama_tokenizer = LlamaTokenizer.from_pretrained(llama_path, use_fast=False)
+        self.llama_tokenizer = AutoTokenizer.from_pretrained(llama_path, use_fast=False)
         self.llama_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         self.llama_tokenizer.padding_side = "right"
 
         logging.info('Loading LLaMA Model')
         if self.low_resource:
-            self.llama_model = LlamaForCausalLM.from_pretrained(
+            self.llama_model = AutoModelForCausalLM.from_pretrained(
                 llama_path,
                 torch_dtype=torch.float16,
                 load_in_8bit=True,
                 device_map={"": device_8bit},
             )
         else:
-            self.llama_model = LlamaForCausalLM.from_pretrained(
+            self.llama_model = AutoModelForCausalLM.from_pretrained(
                 llama_path,
                 torch_dtype=torch.float16,
             )
@@ -153,7 +153,7 @@ class SALMONN(nn.Module):
         
         if self.beats_path:
             logging.info("Loading BEATs Model")
-            beats_ckpt = torch.load(self.beats_path, map_location='cpu')
+            beats_ckpt = torch.load(self.beats_path, map_location='cpu', weights_only=True)
             beats_cfg = BEATsConfig(beats_ckpt['cfg'])
             self.beats = BEATs(beats_cfg)
             self.beats.load_state_dict(beats_ckpt['model'])
@@ -269,9 +269,7 @@ class SALMONN(nn.Module):
                 audio_embeds, _ = self.beats.extract_features(raw_wav, padding_mask=audio_padding_mask, feature_only=True)
             else:
                 audio_embeds = None
-            
-            import pdb; pdb.set_trace()
-
+                        
         return self._encode_auditory_feature(speech_embeds, audio_embeds=audio_embeds)
 
     def prompt_wrap(self, embeds, atts, prompt, multi_prompt=False):
@@ -424,7 +422,7 @@ class SALMONN(nn.Module):
 
         stop_words_ids = [torch.tensor([2]).to(speech_embeds.device)] # TODO: fix this heuristics  
         stopping_criteria = StoppingCriteriaList([StoppingCriteriaSub(stops=stop_words_ids)])
-        import pdb; pdb.set_trace()
+        
         outputs = self.llama_model.generate(
             inputs_embeds=embeds,
             max_new_tokens=generate_cfg.get("max_new_tokens", 200),
