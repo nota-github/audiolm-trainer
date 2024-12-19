@@ -61,6 +61,7 @@ run:
   seed: 42
   output_dir: "outputs_stage1_only"
   evaluate: False # if True, only evaluate model on test data
+  exp_name: "llama-3.2-1B-1percent-stage1"
 
   log_freq: 5
   epoch_based: False
