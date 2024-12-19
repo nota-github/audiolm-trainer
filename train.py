@@ -75,7 +75,7 @@ def main():
     global_rank = int(os.environ["RANK"])
     if global_rank == 0:
         wandb.login()
-        wandb.init(project="YOUR_PROJECT_NAME")
+        wandb.init(project="audio_lm", name=run_config.exp_name)
 
     # print config
     cfg.pretty_print()
