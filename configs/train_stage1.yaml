@@ -14,9 +14,9 @@
 
 model:
   # paths
-  llama_path: "/data/gmkim/checkpoints/lmsys/vicuna-13b-v1.1"
-  whisper_path: "/data/gmkim/checkpoints/openai/whisper-large-v2"
-  beats_path: "/data/gmkim/checkpoints/beats_finetuned_iter3_AS2M_cpt2/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt"
+  llama_path: "/root/base_data/checkpoints/Llama-3.2-3B-Instruct"
+  whisper_path: "/root/base_data/checkpoints/whisper-large-v2"
+  beats_path: "/root/base_data/checkpoints/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt"
 
   ckpt: "" #"model ckpt" # if not "", load model from ckpt for training or evaluation
 
@@ -48,13 +48,13 @@ model:
   end_sym: "</s>"
 
 datasets:
-  prefix: "/data/gmkim/datasets"
+  prefix: "/root/base_data/audios_salmonn_1%_sampled"
   
   train_ann_path: "data/stage1_train.json"
   valid_ann_path: "data/stage1_valid.json"
   test_ann_path: "data/stage1_test.json"
 
-  whisper_path: "/data/gmkim/checkpoints/openai/whisper-large-v2"
+  whisper_path: "/root/base_data/checkpoints/whisper-large-v2"
 
 run:
   # log & settings
@@ -73,7 +73,7 @@ run:
   device: "cuda"
   use_distributed: True
   amp: True
-  world_size: 1
+  world_size: 2
   dist_url: "env://"
 
   # optimizer & scheduler
