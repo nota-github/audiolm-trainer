@@ -501,7 +501,7 @@ class SALMONN(nn.Module):
         ckpt_path = config.get("ckpt", "")
         if ckpt_path:
             logging.info("Load SALMONN ckpt from: {}".format(ckpt_path))
-            ckpt = torch.load(ckpt_path, map_location="cpu")
+            ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=True)
             model.load_state_dict(ckpt['model'], strict=False)
 
         return model
