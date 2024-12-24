@@ -18,9 +18,10 @@ model:
   whisper_path: "openai/whisper-large-v2"
   beats_path: "/root/base_data/checkpoints/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt"
 
-  token: "<hf_token>"  # Use hf token to access gated repositories
+  token: "<hf_token>" # Use hf token to access gated repositories
+  only_preprocessor: True
 
-  ckpt: "" # you may put stage1 checkpoint .pth path in here
+  ckpt: "" # model used for decoding
 
   freeze_whisper: True
   freeze_beats: True
@@ -44,47 +45,23 @@ model:
 
   multi_prompt: True
   prompt_template: "USER: {}\nASSISTANT:"
-  prompt_path: "prompts/train_prompt.json"
-  test_prompt_path: "prompts/test_prompt.json"
+  prompt_path: "/root/np-app-audiolm-trainer/prompts/train_prompt.json"
+  test_prompt_path: "/root/np-app-audiolm-trainer/prompts/train_prompt.json"
   max_txt_len: 300
-  end_sym: "</s>"
+  end_sym: "<|end_of_text|>"
 
-datasets:
-  prefix: "/root/base_data/audios_salmonn_1%_sampled"
-  
-  train_ann_path: "data/stage2_train.json"
-  valid_ann_path: "data/stage2_valid.json"
-  test_ann_path: "data/stage2_test.json"
+generate:
+  max_new_tokens: 200
+  num_beams: 4
+  do_sample: False
+  min_length: 1
+  temperature: 1.0
+  top_p: 0.9
+  repetition_penalty: 1.0
+  length_penalty: 1.0
 
-  whisper_path: "openai/whisper-large-v2"
 
 run:
-  # log & settings
-  seed: 42
-  output_dir: "outputs_stage2"
-  evaluate: False # if True, only evaluate model on test data
-  exp_name: "llama-3.2-1B-1percent-stage2"
-
-  log_freq: 5
-  epoch_based: False
-  iters_per_epoch: 3000
-  accum_grad_iters: 1
-  batch_size_train: 4
-  batch_size_eval: 4
+  batch_size_eval: 8
   num_workers: 8
-
   device: "cuda"
-  use_distributed: True
-  amp: True
-  world_size: 1
-  dist_url: "env://"
-
-  # optimizer & scheduler
-  optims:
-    max_epoch: 30
-    warmup_steps: 3000
-    warmup_start_lr: 1e-6
-    init_lr: 3e-5
-    min_lr: 1e-5
-    weight_decay: 0.05
-    beta2: 0.999

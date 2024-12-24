@@ -20,7 +20,7 @@ import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import LlamaTokenizer, StoppingCriteriaList
+from transformers import StoppingCriteriaList, AutoTokenizer, AutoModelForCausalLM, AutoConfig
 from peft import LoraConfig, TaskType, get_peft_model
 
 from .Qformer import BertConfig, BertLMHeadModel
@@ -91,6 +91,8 @@ class SALMONN(nn.Module):
         end_sym="</s>",
         low_resource=False,  # use 8 bit
         device_8bit=0,  # the device of 8bit model should be set when loading and cannot be changed anymore.
+        token=None,
+        only_preprocessor=None,
     ):
         super().__init__()
 
@@ -106,40 +108,43 @@ class SALMONN(nn.Module):
         self.low_resource = low_resource
 
         logging.info('Loading LLaMA Tokenizer')
-        self.llama_tokenizer = LlamaTokenizer.from_pretrained(llama_path, use_fast=False)
+        self.llama_tokenizer = AutoTokenizer.from_pretrained(llama_path, use_fast=False, token=token)
         self.llama_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         self.llama_tokenizer.padding_side = "right"
 
-        logging.info('Loading LLaMA Model')
-        if self.low_resource:
-            self.llama_model = LlamaForCausalLM.from_pretrained(
-                llama_path,
-                torch_dtype=torch.float16,
-                load_in_8bit=True,
-                device_map={"": device_8bit},
-            )
-        else:
-            self.llama_model = LlamaForCausalLM.from_pretrained(
-                llama_path,
-                torch_dtype=torch.float16,
-            )
+        if not only_preprocessor:
+            logging.info('Loading LLaMA Model')
+            if self.low_resource:
+                self.llama_model = AutoModelForCausalLM.from_pretrained(
+                    llama_path,
+                    torch_dtype=torch.float16,
+                    load_in_8bit=True,
+                    device_map={"": device_8bit},
+                    token=token,
+                )
+            else:
+                self.llama_model = AutoModelForCausalLM.from_pretrained(
+                    llama_path,
+                    torch_dtype=torch.float16,
+                    token=token,
+                )
 
-        self.llama_model.resize_token_embeddings(len(self.llama_tokenizer))
-        for name, param in self.llama_model.named_parameters():
-            param.requires_grad = False
-        logging.info('Loading LLaMA Done')
+            self.llama_model.resize_token_embeddings(len(self.llama_tokenizer))
+            for name, param in self.llama_model.named_parameters():
+                param.requires_grad = False
+            logging.info('Loading LLaMA Done')
 
-        if self.lora:
-            self.peft_config = LoraConfig(
-                task_type=TaskType.CAUSAL_LM, 
-                inference_mode=False, 
-                r=lora_rank, 
-                lora_alpha=lora_alpha, 
-                lora_dropout=lora_dropout,
-            )
-            self.llama_model = get_peft_model(self.llama_model, self.peft_config)
-            self.llama_model.print_trainable_parameters()
-            logging.info('LoRA Training')
+            if self.lora:
+                self.peft_config = LoraConfig(
+                    task_type=TaskType.CAUSAL_LM, 
+                    inference_mode=False, 
+                    r=lora_rank, 
+                    lora_alpha=lora_alpha, 
+                    lora_dropout=lora_dropout,
+                )
+                self.llama_model = get_peft_model(self.llama_model, self.peft_config)
+                self.llama_model.print_trainable_parameters()
+                logging.info('LoRA Training')
 
         assert whisper_path
         logging.info('Loading Whisper Model')
@@ -153,7 +158,7 @@ class SALMONN(nn.Module):
         
         if self.beats_path:
             logging.info("Loading BEATs Model")
-            beats_ckpt = torch.load(self.beats_path, map_location='cpu')
+            beats_ckpt = torch.load(self.beats_path, map_location='cpu', weights_only=True)
             beats_cfg = BEATsConfig(beats_ckpt['cfg'])
             self.beats = BEATs(beats_cfg)
             self.beats.load_state_dict(beats_ckpt['model'])
@@ -187,8 +192,13 @@ class SALMONN(nn.Module):
                 logging.info("freeze Speech QFormer")
 
             logging.info('Loading speech LLAMA proj')
+            if only_preprocessor:
+                config = AutoConfig.from_pretrained(llama_path, token=token)
+                lm_hidden_size = config.hidden_size
+            else:
+                lm_hidden_size = self.llama_model.config.hidden_size
             self.speech_llama_proj = nn.Linear(
-                self.speech_Qformer.config.hidden_size, self.llama_model.config.hidden_size
+                self.speech_Qformer.config.hidden_size, lm_hidden_size
             )
             if speech_llama_proj_model:
                 logging.info("Loading speech LLAMA proj from {}".format(speech_llama_proj_model))
@@ -269,9 +279,7 @@ class SALMONN(nn.Module):
                 audio_embeds, _ = self.beats.extract_features(raw_wav, padding_mask=audio_padding_mask, feature_only=True)
             else:
                 audio_embeds = None
-            
-            import pdb; pdb.set_trace()
-
+                        
         return self._encode_auditory_feature(speech_embeds, audio_embeds=audio_embeds)
 
     def prompt_wrap(self, embeds, atts, prompt, multi_prompt=False):
@@ -424,7 +432,7 @@ class SALMONN(nn.Module):
 
         stop_words_ids = [torch.tensor([2]).to(speech_embeds.device)] # TODO: fix this heuristics  
         stopping_criteria = StoppingCriteriaList([StoppingCriteriaSub(stops=stop_words_ids)])
-        import pdb; pdb.set_trace()
+        
         outputs = self.llama_model.generate(
             inputs_embeds=embeds,
             max_new_tokens=generate_cfg.get("max_new_tokens", 200),
@@ -473,6 +481,9 @@ class SALMONN(nn.Module):
         low_resource = config.get("low_resource", False)
         device_8bit = config.get("device_8bit", 0)
 
+        token = config.get("token", None)
+        only_preprocessor = config.get("only_preprocessor", None)
+
         model = cls(
             llama_path=llama_path,
             whisper_path=whisper_path,
@@ -498,12 +509,14 @@ class SALMONN(nn.Module):
             end_sym=end_sym,
             low_resource=low_resource,
             device_8bit=device_8bit,
+            token=token,
+            only_preprocessor=only_preprocessor,
         )
 
         ckpt_path = config.get("ckpt", "")
         if ckpt_path:
             logging.info("Load SALMONN ckpt from: {}".format(ckpt_path))
-            ckpt = torch.load(ckpt_path, map_location="cpu")
+            ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=True)
             model.load_state_dict(ckpt['model'], strict=False)
 
         return model
