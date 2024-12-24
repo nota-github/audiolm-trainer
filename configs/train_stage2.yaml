@@ -14,11 +14,13 @@
 
 model:
   # paths
-  llama_path: "/root/base_data/checkpoints/Llama-3.2-3B-Instruct"
-  whisper_path: "/root/base_data/checkpoints/whisper-large-v2"
+  llama_path: "meta-llama/Llama-3.2-3B-Instruct"
+  whisper_path: "openai/whisper-large-v2"
   beats_path: "/root/base_data/checkpoints/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt"
 
-  ckpt: "/root/np-app-audiolm-trainer/outputs_stage1_only/202412191230/checkpoint_best.pth" # you may put stage1 checkpoint .pth path in here
+  token: "<hf_token>"  # Use hf token to access gated repositories
+
+  ckpt: "" # you may put stage1 checkpoint .pth path in here
 
   freeze_whisper: True
   freeze_beats: True
@@ -54,7 +56,7 @@ datasets:
   valid_ann_path: "data/stage2_valid.json"
   test_ann_path: "data/stage2_test.json"
 
-  whisper_path: "/root/base_data/checkpoints/whisper-large-v2"
+  whisper_path: "openai/whisper-large-v2"
 
 run:
   # log & settings

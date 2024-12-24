@@ -14,9 +14,11 @@
 
 model:
   # paths
-  llama_path: "/root/base_data/checkpoints/Llama-3.2-3B-Instruct"
-  whisper_path: "/root/base_data/checkpoints/whisper-large-v2"
+  llama_path: "meta-llama/Llama-3.2-3B-Instruct"
+  whisper_path: "openai/whisper-large-v2"
   beats_path: "/root/base_data/checkpoints/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt"
+
+  token: "<hf_token>"  # Use hf token to access gated repositories
 
   ckpt: "" #"model ckpt" # if not "", load model from ckpt for training or evaluation
 
@@ -45,7 +47,7 @@ model:
   prompt_path: "prompts/train_prompt.json"
   test_prompt_path: "prompts/test_prompt.json"
   max_txt_len: 300
-  end_sym: "</s>"
+  end_sym: "<|end_of_text|>"   # TODO: change eos token
 
 datasets:
   prefix: "/root/base_data/audios_salmonn_1%_sampled"
@@ -54,7 +56,7 @@ datasets:
   valid_ann_path: "data/stage1_valid.json"
   test_ann_path: "data/stage1_test.json"
 
-  whisper_path: "/root/base_data/checkpoints/whisper-large-v2"
+  whisper_path: "openai/whisper-large-v2"
 
 run:
   # log & settings
