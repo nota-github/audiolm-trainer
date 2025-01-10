@@ -43,12 +43,12 @@ Here are some examples of SALMONN.
   * Put downloaded directory path into `data_prefix` of config
   * contains 1.4TB of audio
     ```
-    5.4G	Clotho
-    121G	GigaSpeech
-    111G	LibriSpeech
-    20G	MusicNet
-    103G	Voxceleb1
-    772G	WavCaps
+    168G  WavCaps
+    165G  audiocaps
+    110G  GigaSpeech
+    58G   LibriSpeech
+    3.7G  MusicNet
+    2.0G  Clotho
     ```
 * Download annotation files from [here](https://huggingface.co/datasets/lifelongeeek/salmonn_dataset_annotation)
   * place the jsons under `data` directory.
